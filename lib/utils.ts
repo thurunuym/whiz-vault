@@ -2,6 +2,7 @@
 import { type ClassValue, clsx } from "clsx";
 import qs from "query-string";
 import { twMerge } from "tailwind-merge";
+import z from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -86,6 +87,17 @@ interface UrlQueryParams {
   key: string;
   value: string;
 }
+
+const formSchema = z.object({
+  firstName: z.string().min(2, "First name must be at least 2 characters."),
+  lastName: z.string().min(2, "Last name must be at least 2 characters."),
+  address: z.string().min(5, "Enter a valid address."),
+  state: z.string().min(2, "Enter a valid state."),
+  postalCode: z.string().min(4, "Enter a valid postal code."),
+  dateOfBirth: z.string().min(1, "Select your date of birth."),
+  email: z.string().email("Enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters."),
+});
 
 export function formUrlQuery({ params, key, value }: UrlQueryParams) {
   const currentUrl = qs.parse(params);
