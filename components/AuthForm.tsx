@@ -13,62 +13,86 @@ import {
 import CustomInput from './CustomInput'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { signIn, signUp } from '@/lib/actions/user.actions'
 
 // ----------------------
 // Schema
 // ----------------------
 
-const formSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters."),
-  lastName: z.string().min(2, "Last name must be at least 2 characters."),
-  address: z.string().min(5, "Enter a valid address."),
-  state: z.string().min(2, "Enter a valid state."),
-  postalCode: z.string().min(4, "Enter a valid postal code."),
-  dateOfBirth: z.string().min(1, "Select your date of birth."),
+const signInSchema = z.object({
   email: z.string().email("Enter a valid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
-})
+});
+
+const signUpSchema = z.object({
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  address1: z.string().min(5),
+  city: z.string().min(2),
+  state: z.string().min(2),
+  postalCode: z.string().min(4),
+  dateOfBirth: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+
 
 const AuthForm = ({ type }: { type: string }) => {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [user,setUser] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  
+const schema = type === "sign-in" ? signInSchema : signUpSchema;
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
+
+const form = useForm({
+  resolver: zodResolver(schema),
+  defaultValues: {
+    email: "",
+    password: "",
+    ...(type === "sign-up" && {
       firstName: "",
       lastName: "",
-      address: "",
+      address1: "",
+      city: "",
       state: "",
       postalCode: "",
       dateOfBirth: "",
-      email: "",
-      password: "",
-    },
-  })
+    })
+      }
+});
 
-  const onSubmit = async(data: z.infer<typeof formSchema>) =>{
+  const onSubmit = async(data: z.infer<typeof schema>) =>{
+    console.log("FORM SUBMITTED");
     setIsLoading(true)
+    setError(null);
     try {
       
 
       if (type === "sign-up") {
-        // const newUser = await signUp(data);
-        // setUser(newUser);
+        const newUser = await signUp(data);
+        if (newUser) {
+          setUser(newUser);
+          router.push('/');
+        }
       } 
 
       if(type==='sign-in'){
-        // const response = await signIn({
-        //   email:data.email,
-        //   password: data.password,
-        // })
+        const response = await signIn({
+          email:data.email,
+          password: data.password,
+        })
 
-        // if(response) router.push('/')
+        if(response) router.push('/')
       }
 
      
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : `An error occurred during ${type === 'sign-up' ? 'signup' : 'signin'}. Please try again.`;
+      setError(errorMessage);
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -102,6 +126,13 @@ const AuthForm = ({ type }: { type: string }) => {
         </div>
       </header>
 
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-14 text-red-600">{error}</p>
+        </div>
+      )}
+
       {/* Form */}
       <Form {...form}>
         <form
@@ -129,9 +160,16 @@ const AuthForm = ({ type }: { type: string }) => {
 
               <CustomInput
                 form={form}
-                name="address"
+                name="address1"
                 label="Address"
                 placeholder="Enter your address"
+              />
+
+              <CustomInput
+                form={form}
+                name="city"
+                label="City"
+                placeholder="Enter your city"
               />
 
               <div className="flex gap-4">
