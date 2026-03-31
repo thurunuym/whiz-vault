@@ -14,6 +14,7 @@ import CustomInput from './CustomInput'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signIn, signUp } from '@/lib/actions/user.actions'
+import PlaidLink from './plaidLink'
 
 // ----------------------
 // Schema
@@ -32,10 +33,14 @@ const signUpSchema = z.object({
   state: z.string().min(2),
   postalCode: z.string().min(4),
   dateOfBirth: z.string().min(1),
+  ssn: z.string().regex(/^\d{9}$/, "SSN must be 9 digits"),
   email: z.string().email(),
   password: z.string().min(6),
 });
 
+type SignInFormValues = z.infer<typeof signInSchema>;
+type SignUpFormValues = z.infer<typeof signUpSchema>;
+type AuthFormValues = SignInFormValues & Partial<Omit<SignUpFormValues, keyof SignInFormValues>>;
 
 
 const AuthForm = ({ type }: { type: string }) => {
@@ -47,7 +52,7 @@ const AuthForm = ({ type }: { type: string }) => {
 const schema = type === "sign-in" ? signInSchema : signUpSchema;
 
 
-const form = useForm({
+const form = useForm<AuthFormValues>({
   resolver: zodResolver(schema),
   defaultValues: {
     email: "",
@@ -60,19 +65,38 @@ const form = useForm({
       state: "",
       postalCode: "",
       dateOfBirth: "",
+      ssn: "",
     })
       }
 });
 
-  const onSubmit = async(data: z.infer<typeof schema>) =>{
-    console.log("FORM SUBMITTED");
+  const onSubmit = async(data: AuthFormValues) =>{
+    
     setIsLoading(true)
     setError(null);
     try {
       
 
       if (type === "sign-up") {
-        const newUser = await signUp(data);
+
+        const userData = {
+            firstName: data.firstName!,
+            lastName: data.lastName!,
+            address1: data.address1!,
+            city: data.city!,
+            state: data.state!,
+            postalCode: data.postalCode!,
+            dateOfBirth: data.dateOfBirth!,
+            ssn: data.ssn!,
+            email: data.email,
+            password: data.password
+          }
+
+          const newUser = await signUp(userData);
+
+          setUser(newUser);
+
+        
         if (newUser) {
           setUser(newUser);
           router.push('/');
@@ -132,6 +156,14 @@ const form = useForm({
           <p className="text-14 text-red-600">{error}</p>
         </div>
       )}
+
+      {user ? (
+        <div className='flex flex-col gap-4'>
+          <PlaidLink
+          user={user}
+          variant="primary"
+          />
+        </div> ):(<>
 
       {/* Form */}
       <Form {...form}>
@@ -195,6 +227,14 @@ const form = useForm({
                 placeholder="Select your date of birth"
                 type="date"
               />
+
+              <CustomInput
+                form={form}
+                name="ssn"
+                label="Social Security Number"
+                placeholder="Enter your 9-digit SSN"
+                type="text"
+              />
             </>
           )}
 
@@ -250,6 +290,8 @@ const form = useForm({
           </Link>
         </p>
       </footer>
+
+      </> )}
 
     </section>
   )
